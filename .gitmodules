@@ -1,0 +1,3 @@
+[submodule "vendor/database-schema-examples"]
+	path = vendor/database-schema-examples
+	url = git@github.com:prisma/database-schema-examples.git
