@@ -1,8 +1,12 @@
 use std::fmt::Write;
 
-use crate::schema::{self, Column};
+use crate::schema;
 
-pub fn table(table: &schema::Table, columns: &[&Column]) -> anyhow::Result<String> {
+pub fn table(
+    table: &schema::Table,
+    columns: &[&schema::Column],
+    table_constraints: &[&schema::TableConstraint],
+) -> anyhow::Result<String> {
     if table.table_type != Some("BASE TABLE".to_string()) {
         Err(anyhow!("cannot handle table type: {:?}", table.table_type))?
     }
