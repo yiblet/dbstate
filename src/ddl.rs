@@ -1,32 +1,28 @@
 use std::fmt::Write;
 
-use crate::schema;
+use crate::ir;
 
-pub fn table(
-    table: &schema::Table,
-    columns: &[&schema::Column],
-    table_constraints: &[&schema::TableConstraint],
-) -> anyhow::Result<String> {
-    if table.table_type != Some("BASE TABLE".to_string()) {
-        Err(anyhow!("cannot handle table type: {:?}", table.table_type))?
+pub fn table(table: &ir::Table<'_>) -> anyhow::Result<String> {
+    if table.table.table_type != Some("BASE TABLE".to_string()) {
+        Err(anyhow!(
+            "cannot handle table type: {:?}",
+            table.table.table_type
+        ))?
     }
     let mut res: String = "CREATE TABLE ".to_owned();
 
     res.push_str(&table_identifier(
-        table.table_schema.as_ref().map(|s| s.as_str()),
-        &table.table_name,
+        table.table.table_schema.as_ref().map(|s| s.as_str()),
+        &table.table.table_name,
     ));
     res.push_str(" (");
 
-    let mut cols: Vec<_> = columns.iter().cloned().collect();
-    cols.sort_by_key(|col| (&col.column_name, col.ordinal_position));
+    let mut cols: Vec<_> = table.columns.iter().cloned().collect();
+    cols.sort_by_key(|col| (&col.column.column_name, col.column.ordinal_position));
 
     let mut seen = 0;
     for col in cols.into_iter() {
-        let val = match column(col) {
-            Ok(val) => val,
-            Err(_) => continue,
-        };
+        let val = column(&col)?;
         if seen == 0 {
             res.push_str("\n\t")
         } else {
@@ -35,7 +31,9 @@ pub fn table(
         res.push_str(&val);
         seen += 1;
     }
+
     res.push_str("\n);");
+
     Ok(res)
 }
 
@@ -61,21 +59,40 @@ fn identifier(data: &str) -> String {
     format!("\"{}\"", data)
 }
 
-fn column(col: &schema::Column) -> anyhow::Result<String> {
-    let mut res = col.column_name.clone();
+fn is_serial_expression(table_name: &str, column_name: &str, default_expression: &str) -> bool {
+    return format!("nextval('{}_{}_seq'::regclass)", table_name, column_name)
+        == default_expression;
+}
 
-    if col.data_type == "ARRAY" || col.data_type == "USER-DEFINED" {
+fn column(col: &ir::Column<'_>) -> anyhow::Result<String> {
+    let mut res = identifier(&col.column.column_name);
+
+    if col.column.data_type == "ARRAY" || col.column.data_type == "USER-DEFINED" {
         Err(anyhow!("unimplmented data type"))?
     };
 
-    write!(&mut res, " {}", col.data_type)?;
-    if col.is_nullable.unwrap_or_default().is_no() {
+    let (is_serial, data_type) = match (
+        &col.column.table_name,
+        &col.column.column_default,
+        col.column.data_type.as_str(),
+    ) {
+        (table_name, Some(default), "integer")
+            if is_serial_expression(table_name, &col.column.column_name, default) =>
+        {
+            (true, "serial")
+        }
+        (_, _, data_type) => (false, data_type),
+    };
+
+    write!(&mut res, " {}", data_type)?;
+    if col.column.is_nullable.unwrap_or_default().is_no() {
         write!(&mut res, " NOT NULL")?;
     }
 
-    if let Some(default_expr) = col.column_default.as_ref() {
-        write!(&mut res, " DEFAULT {}", default_expr)?;
-    }
+    match (is_serial, col.column.column_default.as_ref()) {
+        (false, Some(expr)) => write!(&mut res, " DEFAULT {}", expr)?,
+        _ => {}
+    };
 
     Ok(res)
 }
