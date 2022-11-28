@@ -7,6 +7,7 @@ use sqlx::PgPool;
 
 mod action;
 mod ddl;
+mod ir;
 mod schema;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
