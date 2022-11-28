@@ -12,9 +12,12 @@ mod schema;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    env_logger::init();
+
     let pool = PgPool::connect(&env::var("DATABASE_URL")?).await?;
 
     let schema_all = action::get_all(&pool).await?;
+
     let ir_all = ir::get_all(&schema_all);
 
     for table in ir_all.tables.iter().filter(|t| !t.table.is_system_schema()) {

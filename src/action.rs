@@ -59,6 +59,10 @@ pub async fn get_all_constraint_table_usage(
 }
 
 pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::All> {
+    let mut fetch_start_time = None;
+    if log::log_enabled!(log::Level::Info) {
+        fetch_start_time = Some(std::time::SystemTime::now());
+    }
     let (
         tables_res,
         columns_res,
@@ -74,6 +78,12 @@ pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::Al
         get_all_constraint_column_usage(&pool),
         get_all_constraint_table_usage(&pool),
     );
+    if let Some(dur) = fetch_start_time.and_then(|s| s.elapsed().ok()) {
+        log::info!(
+            "get all fetched successfully elapsed: {}ms",
+            dur.as_micros() as f64 / 1e3
+        );
+    }
 
     let (
         tables,

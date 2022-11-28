@@ -2,8 +2,6 @@ use std::rc::Rc;
 
 use crate::schema;
 
-type SchemaKey<'a> = (Option<&'a String>, &'a String);
-
 #[derive(Debug, Clone)]
 pub struct All<'a> {
     pub tables: Rc<Vec<Table<'a>>>,
@@ -180,13 +178,24 @@ fn get_all_table_constraints<'a>(
 }
 
 pub fn get_all<'a>(all: &'a schema::All) -> All<'a> {
+    let mut ir_start_time = None;
+    if log::log_enabled!(log::Level::Info) {
+        ir_start_time = Some(std::time::SystemTime::now());
+    }
     let columns = get_all_columns(all);
     let table_constraints = get_all_table_constraints(all, &columns);
     let tables = get_all_tables(all, &columns, &table_constraints);
 
-    All {
+    let res = All {
         tables: Rc::new(tables),
+    };
+    if let Some(dur) = ir_start_time.and_then(|s| s.elapsed().ok()) {
+        log::info!(
+            "ir get all completed: elapsed: {}ms",
+            dur.as_micros() as f64 / 1e3
+        );
     }
+    res
 }
 
 fn collect_by_key<'a, D, K, I, F>(iter: I, func: F) -> multimap::MultiMap<K, &'a D>

@@ -241,6 +241,7 @@ dependencies = [
  "clap",
  "env_logger",
  "futures",
+ "log",
  "multimap",
  "serde",
  "serde_json",
