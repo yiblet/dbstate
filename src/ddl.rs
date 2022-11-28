@@ -12,13 +12,13 @@ pub fn table(table: &ir::Table<'_>) -> anyhow::Result<String> {
     let mut res: String = "CREATE TABLE ".to_owned();
 
     res.push_str(&table_identifier(
-        table.table.table_schema.as_ref().map(|s| s.as_str()),
-        &table.table.table_name,
+        table.table_schema.as_ref().map(|s| s.as_str()),
+        &table.table_name,
     ));
     res.push_str(" (");
 
     let mut cols: Vec<_> = table.columns.iter().cloned().collect();
-    cols.sort_by_key(|col| (&col.column.column_name, col.column.ordinal_position));
+    cols.sort_by_key(|col| (&col.column_name, col.ordinal_position));
 
     let mut seen = 0;
     for col in cols.into_iter() {
@@ -65,19 +65,19 @@ fn is_serial_expression(table_name: &str, column_name: &str, default_expression:
 }
 
 fn column(col: &ir::Column<'_>) -> anyhow::Result<String> {
-    let mut res = identifier(&col.column.column_name);
+    let mut res = identifier(&col.column_name);
 
-    if col.column.data_type == "ARRAY" || col.column.data_type == "USER-DEFINED" {
+    if col.data_type == "ARRAY" || col.data_type == "USER-DEFINED" {
         Err(anyhow!("unimplmented data type"))?
     };
 
     let (is_serial, data_type) = match (
-        &col.column.table_name,
-        &col.column.column_default,
-        col.column.data_type.as_str(),
+        &col.table_name,
+        &col.column_default,
+        col.data_type.as_str(),
     ) {
         (table_name, Some(default), "integer")
-            if is_serial_expression(table_name, &col.column.column_name, default) =>
+            if is_serial_expression(table_name, &col.column_name, default) =>
         {
             (true, "serial")
         }
@@ -85,11 +85,11 @@ fn column(col: &ir::Column<'_>) -> anyhow::Result<String> {
     };
 
     write!(&mut res, " {}", data_type)?;
-    if col.column.is_nullable.unwrap_or_default().is_no() {
+    if col.is_nullable.unwrap_or_default().is_no() {
         write!(&mut res, " NOT NULL")?;
     }
 
-    match (is_serial, col.column.column_default.as_ref()) {
+    match (is_serial, col.column_default.as_ref()) {
         (false, Some(expr)) => write!(&mut res, " DEFAULT {}", expr)?,
         _ => {}
     };

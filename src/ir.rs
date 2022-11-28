@@ -16,9 +16,25 @@ pub struct Table<'a> {
     pub columns: Rc<Vec<Column<'a>>>,
 }
 
+impl<'a> std::ops::Deref for Table<'a> {
+    type Target = &'a schema::Table;
+
+    fn deref(&self) -> &Self::Target {
+        &self.table
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Column<'a> {
     pub column: &'a schema::Column,
+}
+
+impl<'a> std::ops::Deref for Column<'a> {
+    type Target = &'a schema::Column;
+
+    fn deref(&self) -> &Self::Target {
+        &self.column
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -27,6 +43,14 @@ pub struct TableConstraint<'a> {
     pub columns: Rc<Vec<Column<'a>>>,
     // should always be just one table
     pub tables: Rc<Vec<&'a schema::Table>>, //referencing the schema (not the ir::Table) since using the ir table would cause a circular reference.
+}
+
+impl<'a> std::ops::Deref for TableConstraint<'a> {
+    type Target = &'a schema::TableConstraint;
+
+    fn deref(&self) -> &Self::Target {
+        &self.table_constraint
+    }
 }
 
 fn get_all_tables<'a>(
