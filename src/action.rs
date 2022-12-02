@@ -58,6 +58,17 @@ pub async fn get_all_constraint_table_usage(
     Ok(table_constraints)
 }
 
+pub async fn get_all_element_types(
+    pool: &sqlx::postgres::PgPool,
+) -> anyhow::Result<Vec<schema::ElementType>> {
+    let rows: Vec<schema::ElementType> =
+        sqlx::query_as(r#"select * from information_schema.element_types"#)
+            .fetch_all(pool)
+            .await?;
+
+    Ok(rows)
+}
+
 pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::All> {
     let mut fetch_start_time = None;
     if log::log_enabled!(log::Level::Info) {
@@ -70,6 +81,7 @@ pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::Al
         table_constraints_res,
         constraint_column_usage_res,
         constraint_table_usage_res,
+        element_types_res,
     ) = futures::join!(
         get_all_tables(&pool),
         get_all_columns(&pool),
@@ -77,6 +89,7 @@ pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::Al
         get_all_table_constraints(&pool),
         get_all_constraint_column_usage(&pool),
         get_all_constraint_table_usage(&pool),
+        get_all_element_types(&pool),
     );
     if let Some(dur) = fetch_start_time.and_then(|s| s.elapsed().ok()) {
         log::info!(
@@ -92,6 +105,7 @@ pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::Al
         table_constraints,
         constraint_column_usage,
         constraint_table_usage,
+        element_types,
     ) = (
         tables_res?,
         columns_res?,
@@ -99,6 +113,7 @@ pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::Al
         table_constraints_res?,
         constraint_column_usage_res?,
         constraint_table_usage_res?,
+        element_types_res?,
     );
 
     let res = schema::All {
@@ -108,6 +123,7 @@ pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::Al
         table_constraints,
         constraint_column_usage,
         constraint_table_usage,
+        element_types,
     };
 
     Ok(res)

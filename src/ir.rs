@@ -25,6 +25,7 @@ impl<'a> std::ops::Deref for Table<'a> {
 #[derive(Debug, Clone)]
 pub struct Column<'a> {
     pub column: &'a schema::Column,
+    pub element_type: Option<&'a schema::ElementType>,
 }
 
 impl<'a> std::ops::Deref for Column<'a> {
@@ -95,7 +96,32 @@ fn get_all_tables<'a>(
 }
 
 fn get_all_columns<'a>(all: &'a schema::All) -> Vec<Column<'a>> {
-    all.columns.iter().map(|column| Column { column }).collect()
+    let element_types_by_column = collect_by_key(all.element_types.iter(), |e| {
+        (
+            &e.object_schema,
+            e.object_name.as_str(),
+            e.object_type.as_str(),
+            &e.collection_type_identifier,
+        )
+    });
+
+    all.columns
+        .iter()
+        .map(|column| {
+            let element_type = element_types_by_column
+                .get(&(
+                    &column.table_schema,
+                    column.table_name.as_str(),
+                    "TABLE",
+                    &column.dtd_identifier,
+                ))
+                .cloned();
+            Column {
+                column,
+                element_type,
+            }
+        })
+        .collect()
 }
 
 fn get_all_table_constraints<'a>(

@@ -10,6 +10,7 @@ pub struct All {
     pub table_constraints: Vec<TableConstraint>,
     pub constraint_column_usage: Vec<ConstraintColumnUsage>,
     pub constraint_table_usage: Vec<ConstraintTableUsage>,
+    pub element_types: Vec<ElementType>,
 }
 
 #[derive(Debug, Clone, sqlx::FromRow)]
@@ -362,4 +363,95 @@ pub struct ConstraintTableUsage {
 
     /// Name of the constraint
     pub constraint_name: String,
+}
+
+/// The view element_types contains the data type descriptors of the elements of arrays. When a table column, composite-type attribute, domain, function parameter, or function return value is defined to be of an array type, the respective information schema view only contains ARRAY in the column data_type. To obtain information on the element type of the array, you can join the respective view with this view. For example, to show the columns of a table with data types and array element types, if applicable, you could do:
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct ElementType {
+    /// Name of the database that contains the object that uses the array being described (always the current database)
+    pub object_catalog: Option<String>,
+
+    /// Name of the schema that contains the object that uses the array being described
+    pub object_schema: Option<String>,
+
+    /// Name of the object that uses the array being described
+    pub object_name: String,
+
+    /// The type of the object that uses the array being described: one of TABLE (the array is used by a column of that table), USER-DEFINED TYPE (the array is used by an attribute of that composite type), DOMAIN (the array is used by that domain), ROUTINE (the array is used by a parameter or the return data type of that function).
+    pub object_type: String,
+
+    /// The identifier of the data type descriptor of the array being described. Use this to join with the dtd_identifier columns of other information schema views.
+    pub collection_type_identifier: Option<String>,
+
+    /// Data type of the array elements, if it is a built-in type, else USER-DEFINED (in that case, the type is identified in udt_name and associated columns).
+    pub data_type: Option<String>,
+
+    /// Always null, since this information is not applied to array element data types in PostgreSQL
+    pub character_maximum_length: Option<i32>,
+
+    /// Always null, since this information is not applied to array element data types in PostgreSQL
+    pub character_octet_length: Option<i32>,
+
+    /// Applies to a feature not available in PostgreSQL
+    pub character_set_catalog: Option<String>,
+
+    /// Applies to a feature not available in PostgreSQL
+    pub character_set_schema: Option<String>,
+
+    /// Applies to a feature not available in PostgreSQL
+    pub character_set_name: Option<String>,
+
+    /// Name of the database containing the collation of the element type (always the current database), null if default or the data type of the element is not collatable
+    pub collation_catalog: Option<String>,
+
+    /// Name of the schema containing the collation of the element type, null if default or the data type of the element is not collatable
+    pub collation_schema: Option<String>,
+
+    /// Name of the collation of the element type, null if default or the data type of the element is not collatable
+    pub collation_name: Option<String>,
+
+    /// Always null, since this information is not applied to array element data types in PostgreSQL
+    pub numeric_precision: Option<i32>,
+
+    /// Always null, since this information is not applied to array element data types in PostgreSQL
+    pub numeric_precision_radix: Option<i32>,
+
+    /// Always null, since this information is not applied to array element data types in PostgreSQL
+    pub numeric_scale: Option<i32>,
+
+    /// Always null, since this information is not applied to array element data types in PostgreSQL
+    pub datetime_precision: Option<i32>,
+
+    /// Always null, since this information is not applied to array element data types in PostgreSQL
+    pub interval_type: Option<String>,
+
+    /// Always null, since this information is not applied to array element data types in PostgreSQL
+    pub interval_precision: Option<i32>,
+
+    /// Not yet implemented
+    pub domain_default: Option<String>,
+
+    /// Name of the database that the data type of the elements is defined in (always the current database)
+    pub udt_catalog: Option<String>,
+
+    /// Name of the schema that the data type of the elements is defined in
+    pub udt_schema: Option<String>,
+
+    /// Name of the data type of the elements
+    pub udt_name: Option<String>,
+
+    /// Applies to a feature not available in PostgreSQL
+    pub scope_catalog: Option<String>,
+
+    /// Applies to a feature not available in PostgreSQL
+    pub scope_schema: Option<String>,
+
+    /// Applies to a feature not available in PostgreSQL
+    pub scope_name: Option<String>,
+
+    /// Always null, because arrays always have unlimited maximum cardinality in PostgreSQL
+    pub maximum_cardinality: Option<i32>,
+
+    /// An identifier of the data type descriptor of the element. This is currently not useful.
+    pub dtd_identifier: Option<String>,
 }
