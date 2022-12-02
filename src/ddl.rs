@@ -67,21 +67,23 @@ fn is_serial_expression(table_name: &str, column_name: &str, default_expression:
 fn column(col: &ir::Column<'_>) -> anyhow::Result<String> {
     let mut res = identifier(&col.column_name);
 
-    if col.data_type == "ARRAY" || col.data_type == "USER-DEFINED" {
-        Err(anyhow!("unimplmented data type"))?
-    };
-
-    let (is_serial, data_type) = match (
-        &col.table_name,
-        &col.column_default,
-        col.data_type.as_str(),
-    ) {
-        (table_name, Some(default), "integer")
-            if is_serial_expression(table_name, &col.column_name, default) =>
-        {
-            (true, "serial")
+    let data_type = match (&col.column_default, col.data_type.as_str()) {
+        (_, "USER-DEFINED") => Err(anyhow!("unimplmented data type"))?,
+        (_, "ARRAY") => {
+            let Some(element_type)  = col.element_type else {
+                Err(anyhow!("missing element type for array"))?
+            };
+            let Some(data_type) = element_type.data_type.as_ref() else {
+                Err(anyhow!("missing data type for array"))?
+            };
+            format!("[]{}", data_type)
         }
-        (_, _, data_type) => (false, data_type),
+        (Some(default), "integer")
+            if is_serial_expression(&col.table_name, &col.column_name, default) =>
+        {
+            "serial".to_owned()
+        }
+        (_, data_type) => data_type.to_owned(),
     };
 
     write!(&mut res, " {}", data_type)?;
@@ -89,6 +91,7 @@ fn column(col: &ir::Column<'_>) -> anyhow::Result<String> {
         write!(&mut res, " NOT NULL")?;
     }
 
+    let is_serial = data_type == "serial";
     match (is_serial, col.column_default.as_ref()) {
         (false, Some(expr)) => write!(&mut res, " DEFAULT {}", expr)?,
         _ => {}

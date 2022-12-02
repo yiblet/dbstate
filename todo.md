@@ -19,4 +19,10 @@
   - We'll need to join these things together to send it over for formatting.
 
 6. use saner type name: "double precision -> float8"
-8. handle array types
+- [ ] handle arrays of arrays
+- [ ] handle user defined types
+- [ ] handle arrays of user defined types
+- [ ] show primary key
+
+# Done
+- [x] handle array types
