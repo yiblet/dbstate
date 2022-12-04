@@ -70,12 +70,15 @@ fn column(col: &ir::Column<'_>) -> anyhow::Result<String> {
     let data_type = match (&col.column_default, col.data_type.as_str()) {
         (_, "USER-DEFINED") => Err(anyhow!("unimplmented data type"))?,
         (_, "ARRAY") => {
-            let Some(element_type)  = col.element_type else {
-                Err(anyhow!("missing element type for array"))?
-            };
-            let Some(data_type) = element_type.data_type.as_ref() else {
-                Err(anyhow!("missing data type for array"))?
-            };
+            let element_type = col
+                .element_type
+                .ok_or_else(|| anyhow!("missing element type for array"))?;
+
+            let data_type = element_type
+                .data_type
+                .as_ref()
+                .ok_or_else(|| anyhow!("missing data type for array"))?;
+
             format!("[]{}", data_type)
         }
         (Some(default), "integer")
