@@ -1,11 +1,12 @@
 # Todo
+- [ ] show primary key
 
-# Missing Features
-1. user-defined types
-2. Collate
-3. Sensible quoting
-4. views
-5. constraints (column constraints and table constraints)
+# Backlog
+- [ ] user-defined types
+- [ ] Collate
+- [ ] Sensible quoting
+- [ ] views
+- [ ] constraints (column constraints and table constraints)
   - In order to enable this, we will first need to identify the right
     constraint. Then join on constraint key usage, and constraint column
     usage.
@@ -18,11 +19,10 @@
     - a table constraint
   - We'll need to join these things together to send it over for formatting.
 
-6. use saner type name: "double precision -> float8"
+- [ ] use saner type name: "double precision -> float8"
 - [ ] handle arrays of arrays
 - [ ] handle user defined types
 - [ ] handle arrays of user defined types
-- [ ] show primary key
 
 # Done
 - [x] handle array types
