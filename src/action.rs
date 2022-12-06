@@ -69,6 +69,17 @@ pub async fn get_all_element_types(
     Ok(rows)
 }
 
+pub async fn get_all_check_constraints(
+    pool: &sqlx::postgres::PgPool,
+) -> anyhow::Result<Vec<schema::CheckConstraint>> {
+    let rows: Vec<schema::CheckConstraint> =
+        sqlx::query_as(r#"select * from information_schema.check_constraints"#)
+            .fetch_all(pool)
+            .await?;
+
+    Ok(rows)
+}
+
 pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::All> {
     let mut fetch_start_time = None;
     if log::log_enabled!(log::Level::Info) {
@@ -82,6 +93,7 @@ pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::Al
         constraint_column_usage_res,
         constraint_table_usage_res,
         element_types_res,
+        check_constraints_res,
     ) = futures::join!(
         get_all_tables(&pool),
         get_all_columns(&pool),
@@ -90,6 +102,7 @@ pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::Al
         get_all_constraint_column_usage(&pool),
         get_all_constraint_table_usage(&pool),
         get_all_element_types(&pool),
+        get_all_check_constraints(&pool),
     );
     if let Some(dur) = fetch_start_time.and_then(|s| s.elapsed().ok()) {
         log::info!(
@@ -106,6 +119,7 @@ pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::Al
         constraint_column_usage,
         constraint_table_usage,
         element_types,
+        check_constraints,
     ) = (
         tables_res?,
         columns_res?,
@@ -114,6 +128,7 @@ pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::Al
         constraint_column_usage_res?,
         constraint_table_usage_res?,
         element_types_res?,
+        check_constraints_res?,
     );
 
     let res = schema::All {
@@ -124,6 +139,7 @@ pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::Al
         constraint_column_usage,
         constraint_table_usage,
         element_types,
+        check_constraints,
     };
 
     Ok(res)

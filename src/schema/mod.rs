@@ -11,6 +11,7 @@ pub struct All {
     pub constraint_column_usage: Vec<ConstraintColumnUsage>,
     pub constraint_table_usage: Vec<ConstraintTableUsage>,
     pub element_types: Vec<ElementType>,
+    pub check_constraints: Vec<CheckConstraint>,
 }
 
 #[derive(Debug, Clone, sqlx::FromRow)]
@@ -454,4 +455,20 @@ pub struct ElementType {
 
     /// An identifier of the data type descriptor of the element. This is currently not useful.
     pub dtd_identifier: Option<String>,
+}
+
+/// The view check_constraints contains all check constraints, either defined on a table or on a domain, that are owned by a currently enabled role. (The owner of the table or domain is the owner of the constraint.)
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct CheckConstraint {
+    /// Name of the database containing the constraint (always the current database)
+    pub constraint_catalog: Option<String>,
+
+    /// Name of the schema containing the constraint
+    pub constraint_schema: Option<String>,
+
+    /// Name of the constraint
+    pub constraint_name: Option<String>,
+
+    /// The check expression of the check constraint
+    pub check_clause: Option<String>,
 }
