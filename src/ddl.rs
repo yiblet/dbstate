@@ -20,17 +20,28 @@ pub fn table(table: &ir::Table<'_>) -> anyhow::Result<String> {
     let mut cols: Vec<_> = table.columns.iter().cloned().collect();
     cols.sort_by_key(|col| (&col.column_name, col.ordinal_position));
 
-    let mut seen = 0;
-    for col in cols.into_iter() {
-        let val = column(&col)?;
-        if seen == 0 {
-            res.push_str("\n\t")
-        } else {
-            res.push_str(",\n\t")
+    let mut inserted_lines = 0;
+    let mut append = |data: &str| {
+        if inserted_lines > 0 {
+            res.push_str(",");
         }
-        res.push_str(&val);
-        seen += 1;
+        res.push_str("\n\t");
+        res.push_str(data);
+        inserted_lines += 1;
+    };
+
+    for col in cols.iter() {
+        let val = column(&col)?;
+        append(&val);
     }
+    for constraint in table.table_constraints.as_slice().iter() {
+        let val = table_constraint(constraint)?;
+        if val == "" {
+            continue;
+        }
+        append(&val);
+    }
+    drop(append);
 
     res.push_str("\n);");
 
@@ -62,6 +73,38 @@ fn identifier(data: &str) -> String {
 fn is_serial_expression(table_name: &str, column_name: &str, default_expression: &str) -> bool {
     return format!("nextval('{}_{}_seq'::regclass)", table_name, column_name)
         == default_expression;
+}
+
+fn table_constraint(item: &ir::TableConstraint<'_>) -> anyhow::Result<String> {
+    let mut res = String::new();
+
+    match item.constraint_type.as_str() {
+        "PRIMARY KEY" => {
+            let cols = item
+                .columns
+                .iter()
+                .map(|c| identifier(&c.column_name))
+                .enumerate()
+                .fold(String::new(), |mut acc, (idx, id)| {
+                    if idx != 0 {
+                        acc.push_str(", ");
+                    };
+                    acc.push_str(id.as_str());
+                    acc
+                });
+
+            write!(&mut res, "PRIMARY KEY ({})", cols)?;
+        }
+        _ => {
+            log::warn!(
+                "unexepected constraint type {} {:?}",
+                item.constraint_type.as_str(),
+                item
+            );
+        }
+    }
+
+    Ok(res)
 }
 
 fn column(col: &ir::Column<'_>) -> anyhow::Result<String> {

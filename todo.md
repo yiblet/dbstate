@@ -1,9 +1,11 @@
 # Todo
 - [ ] show primary key
+- [ ] show foreign key constraints
+- [ ] show "references" columns
 
 # Backlog
 - [ ] user-defined types
-- [ ] Collate
+- [ ] collate
 - [ ] Sensible quoting
 - [ ] views
 - [ ] constraints (column constraints and table constraints)

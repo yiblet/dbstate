@@ -171,7 +171,7 @@ pub struct TableConstraint {
     pub table_name: String,
 
     /// Type of the constraint: CHECK, FOREIGN KEY, PRIMARY KEY, or UNIQUE
-    pub constraint_type: Option<String>,
+    pub constraint_type: String,
 
     /// YES if the constraint is deferrable, NO if not
     pub is_deferrable: Option<YesNo>,

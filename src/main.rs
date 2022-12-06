@@ -3,6 +3,7 @@ extern crate anyhow;
 
 use std::env;
 
+use anyhow::Context;
 use sqlx::PgPool;
 
 mod action;
@@ -10,14 +11,13 @@ mod ddl;
 mod ir;
 mod schema;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    env_logger::init();
-
-    let pool = PgPool::connect(&env::var("DATABASE_URL")?).await?;
+async fn run() -> anyhow::Result<()> {
+    let pool = PgPool::connect(
+        &env::var("DATABASE_URL").context("missing DATABASE_URL environment flag")?,
+    )
+    .await?;
 
     let schema_all = action::get_all(&pool).await?;
-
     let ir_all = ir::get_all(&schema_all);
 
     for table in ir_all.tables.iter().filter(|t| !t.table.is_system_schema()) {
@@ -32,4 +32,11 @@ async fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    env_logger::init();
+
+    run().await
 }
