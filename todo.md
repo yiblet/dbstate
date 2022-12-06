@@ -1,6 +1,8 @@
 # Todo
 - [ ] show foreign key constraints
+- [ ] show unique constraints
 - [ ] show "references" columns
+- [ ] add check constraint
 
 # Backlog
 - [ ] user-defined types
