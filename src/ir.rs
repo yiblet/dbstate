@@ -23,6 +23,19 @@ impl<'a> std::ops::Deref for Table<'a> {
 }
 
 #[derive(Debug, Clone)]
+pub struct CheckConstraint<'a> {
+    pub check_constraint: &'a schema::CheckConstraint,
+}
+
+impl<'a> std::ops::Deref for CheckConstraint<'a> {
+    type Target = &'a schema::CheckConstraint;
+
+    fn deref(&self) -> &Self::Target {
+        &self.check_constraint
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Column<'a> {
     pub column: &'a schema::Column,
     pub element_type: Option<&'a schema::ElementType>,
@@ -39,6 +52,7 @@ impl<'a> std::ops::Deref for Column<'a> {
 #[derive(Debug, Clone)]
 pub struct TableConstraint<'a> {
     pub table_constraint: &'a schema::TableConstraint,
+    pub check_constraints: Rc<Vec<CheckConstraint<'a>>>,
     pub columns: Rc<Vec<Column<'a>>>,
     // should always be just one table
     pub tables: Rc<Vec<&'a schema::Table>>, //referencing the schema (not the ir::Table) since using the ir table would cause a circular reference.
@@ -148,6 +162,11 @@ fn get_all_table_constraints<'a>(
             (c.constraint_schema.as_ref(), &c.constraint_name)
         });
 
+    let constraint_schema_constraint_name_by_check_constraints =
+        collect_by_key(all.check_constraints.iter(), |c| {
+            (c.constraint_schema.as_ref(), &c.constraint_name)
+        });
+
     all.table_constraints
         .iter()
         .map(|table_constraint| -> TableConstraint<'_> {
@@ -194,10 +213,23 @@ fn get_all_table_constraints<'a>(
                 })
                 .collect();
 
+            let check_constraints: Vec<_> = constraint_schema_constraint_name_by_check_constraints
+                .get_vec(&(
+                    table_constraint.constraint_schema.as_ref(),
+                    &table_constraint.constraint_name,
+                ))
+                .iter()
+                .flat_map(|v| v.iter())
+                .map(|check| CheckConstraint {
+                    check_constraint: check,
+                })
+                .collect();
+
             TableConstraint {
                 table_constraint,
                 columns: Rc::new(columns),
                 tables: Rc::new(tables),
+                check_constraints: Rc::new(check_constraints),
             }
         })
         .collect()

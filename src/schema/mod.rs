@@ -467,8 +467,8 @@ pub struct CheckConstraint {
     pub constraint_schema: Option<String>,
 
     /// Name of the constraint
-    pub constraint_name: Option<String>,
+    pub constraint_name: String,
 
     /// The check expression of the check constraint
-    pub check_clause: Option<String>,
+    pub check_clause: String,
 }
