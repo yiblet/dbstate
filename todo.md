@@ -1,5 +1,4 @@
 # Todo
-- [ ] show primary key
 - [ ] show foreign key constraints
 - [ ] show "references" columns
 
@@ -28,3 +27,4 @@
 
 # Done
 - [x] handle array types
+- [x] show primary key
