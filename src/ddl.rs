@@ -42,12 +42,10 @@ pub fn table(table: &ir::Table<'_>) -> anyhow::Result<String> {
         .iter()
         .filter(|c| !is_non_nullable_check_constraint(c))
     {
-        let val = table_constraint(constraint)?;
-        if val == "" {
-            continue;
+        match table_constraint(constraint)? {
+            Some(val) => append(&val),
+            None => continue,
         }
-
-        append(&val);
     }
     drop(append);
 
@@ -83,9 +81,7 @@ fn is_serial_expression(table_name: &str, column_name: &str, default_expression:
         == default_expression;
 }
 
-fn table_constraint(item: &ir::TableConstraint<'_>) -> anyhow::Result<String> {
-    let mut res = String::new();
-
+fn table_constraint(item: &ir::TableConstraint<'_>) -> anyhow::Result<Option<String>> {
     match item.constraint_type.as_str() {
         "PRIMARY KEY" => {
             let cols = item
@@ -101,7 +97,8 @@ fn table_constraint(item: &ir::TableConstraint<'_>) -> anyhow::Result<String> {
                     acc
                 });
 
-            write!(&mut res, "PRIMARY KEY ({})", cols)?;
+            let res = format!("PRIMARY KEY ({})", cols);
+            Ok(Some(res))
         }
         _ => {
             log::warn!(
@@ -109,10 +106,10 @@ fn table_constraint(item: &ir::TableConstraint<'_>) -> anyhow::Result<String> {
                 item.constraint_type.as_str(),
                 item
             );
+
+            Ok(None)
         }
     }
-
-    Ok(res)
 }
 
 fn create_is_non_nullable_constraint(
