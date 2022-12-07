@@ -84,20 +84,19 @@ fn is_serial_expression(table_name: &str, column_name: &str, default_expression:
 fn table_constraint(item: &ir::TableConstraint<'_>) -> anyhow::Result<Option<String>> {
     match item.constraint_type.as_str() {
         "PRIMARY KEY" => {
-            let cols = item
-                .columns
-                .iter()
-                .map(|c| identifier(&c.column_name))
-                .enumerate()
-                .fold(String::new(), |mut acc, (idx, id)| {
-                    if idx != 0 {
-                        acc.push_str(", ");
-                    };
-                    acc.push_str(id.as_str());
-                    acc
-                });
-
+            let cols = join(
+                item.columns.iter().map(|c| identifier(&c.column_name)),
+                ", ",
+            );
             let res = format!("PRIMARY KEY ({})", cols);
+            Ok(Some(res))
+        }
+        "UNIQUE" => {
+            let cols = join(
+                item.columns.iter().map(|c| identifier(&c.column_name)),
+                ", ",
+            );
+            let res = format!("UNIQUE ({})", cols);
             Ok(Some(res))
         }
         _ => {
@@ -128,8 +127,8 @@ where
         })
         .collect();
 
-    if log::log_enabled!(log::Level::Warn) {
-        log::warn!(
+    if log::log_enabled!(log::Level::Info) {
+        log::info!(
             "valid non nullable check clauses {:?}",
             &non_nullable_check_constraints
         )
@@ -199,4 +198,18 @@ fn column(col: &ir::Column<'_>) -> anyhow::Result<String> {
     };
 
     Ok(res)
+}
+
+fn join<'a, I, S>(iter: I, sep: &'a str) -> String
+where
+    I: Iterator<Item = S>,
+    S: AsRef<str>,
+{
+    iter.enumerate().fold(String::new(), |mut acc, (idx, id)| {
+        if idx != 0 {
+            acc.push_str(sep);
+        };
+        acc.push_str(id.as_ref());
+        acc
+    })
 }

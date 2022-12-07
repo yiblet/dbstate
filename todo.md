@@ -1,10 +1,13 @@
 # Todo
 - [ ] show foreign key constraints
-- [ ] show unique constraints
 - [ ] show "references" columns
 - [ ] add check constraint
+- [ ] show unique constraints that have non-default name
+- [ ] show primary key constraint that has a non-default name
+- [ ] show foreign key constraint that has a non-default name
 
 # Backlog
+- [ ] handle deferrable / non-defferrable constraints
 - [ ] user-defined types
 - [ ] collate
 - [ ] Sensible quoting
@@ -30,3 +33,4 @@
 # Done
 - [x] handle array types
 - [x] show primary key
+- [x] show unique constraints

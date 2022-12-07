@@ -182,6 +182,7 @@ pub struct TableConstraint {
 
     /// Applies to a feature not available in PostgreSQL (currently always YES)
     pub enforced: Option<YesNo>,
+    // NOTE there is an additional "nulls_distinct" that's only available in postgres v15 and up
 }
 
 #[derive(Debug, Clone, sqlx::FromRow)]
