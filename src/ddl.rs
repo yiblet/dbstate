@@ -1,4 +1,4 @@
-use std::fmt::Write;
+use std::{collections::btree_set, fmt::Write};
 
 use crate::ir;
 
@@ -34,11 +34,19 @@ pub fn table(table: &ir::Table<'_>) -> anyhow::Result<String> {
         let val = column(&col)?;
         append(&val);
     }
-    for constraint in table.table_constraints.as_slice().iter() {
+
+    let is_non_nullable_check_constraint = create_is_non_nullable_constraint(&cols);
+    for constraint in table
+        .table_constraints
+        .as_slice()
+        .iter()
+        .filter(|c| !is_non_nullable_check_constraint(c))
+    {
         let val = table_constraint(constraint)?;
         if val == "" {
             continue;
         }
+
         append(&val);
     }
     drop(append);
@@ -103,6 +111,56 @@ fn table_constraint(item: &ir::TableConstraint<'_>) -> anyhow::Result<String> {
             );
         }
     }
+
+    Ok(res)
+}
+
+fn create_is_non_nullable_constraint(
+    cols: &[ir::Column<'_>],
+) -> impl Fn(&ir::TableConstraint<'_>) -> bool
+where
+{
+    let non_nullable_check_constraints: btree_set::BTreeSet<_> = cols
+        .iter()
+        .filter_map(|c| match non_nullable_check_constraint(c) {
+            Ok(c) => c,
+            Err(err) => {
+                log::warn!("expected_check_constraint failed {}", err);
+                None
+            }
+        })
+        .collect();
+
+    if log::log_enabled!(log::Level::Warn) {
+        log::warn!(
+            "valid non nullable check clauses {:?}",
+            &non_nullable_check_constraints
+        )
+    }
+
+    return move |constraint: &ir::TableConstraint<'_>| -> bool {
+        if constraint.constraint_type != "CHECK" || constraint.check_constraints.is_empty() {
+            return false;
+        }
+        constraint.check_constraints.iter().all(|c| {
+            if !non_nullable_check_constraints.contains(&c.check_clause) {
+                log::warn!(
+                    "check clause {:?} is not a nullable check clause",
+                    c.check_clause
+                )
+            }
+            true
+        })
+    };
+}
+
+fn non_nullable_check_constraint(col: &ir::Column<'_>) -> anyhow::Result<Option<String>> {
+    let is_nullable = col.is_nullable.map_or(true, |x| x.is_yes());
+    let res = if !is_nullable {
+        Some(format!("{} IS NOT NULL", &col.column_name))
+    } else {
+        None
+    };
 
     Ok(res)
 }

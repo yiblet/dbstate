@@ -170,11 +170,13 @@ fn get_all_table_constraints<'a>(
     all.table_constraints
         .iter()
         .map(|table_constraint| -> TableConstraint<'_> {
-            let columns: Vec<_> = schema_constraint_column_usage_by_table_constraints
+            let column_usage: Option<&Vec<_>> = schema_constraint_column_usage_by_table_constraints
                 .get_vec(&(
                     table_constraint.constraint_schema.as_ref(),
                     &table_constraint.constraint_name,
-                ))
+                ));
+
+            let columns = column_usage
                 .iter()
                 .flat_map(|v| v.iter())
                 .filter_map(|usage| {
@@ -186,9 +188,10 @@ fn get_all_table_constraints<'a>(
                         ))
                         .cloned();
                     if column.is_none() {
-                        eprintln!(
+                        log::warn!(
                             "cannot find column {} in table {}",
-                            usage.column_name, usage.table_name
+                            usage.column_name,
+                            usage.table_name
                         )
                     }
                     column.cloned()
@@ -207,7 +210,7 @@ fn get_all_table_constraints<'a>(
                         .get(&(usage.table_schema.as_ref(), &usage.table_name))
                         .cloned();
                     if table.is_none() {
-                        eprintln!("cannot find table {}", usage.table_name)
+                        log::warn!("cannot find table {}", usage.table_name)
                     }
                     table
                 })
