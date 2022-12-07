@@ -164,9 +164,9 @@ fn non_nullable_check_constraint(col: &ir::Column<'_>) -> anyhow::Result<Option<
 fn column(col: &ir::Column<'_>) -> anyhow::Result<String> {
     let mut res = identifier(&col.column_name);
 
-    let data_type = match (&col.column_default, col.data_type.as_str()) {
-        (_, "USER-DEFINED") => Err(anyhow!("unimplmented data type"))?,
-        (_, "ARRAY") => {
+    let data_type = match col.data_type.as_str() {
+        "USER-DEFINED" => Err(anyhow!("unimplmented data type"))?,
+        "ARRAY" => {
             let element_type = col
                 .element_type
                 .ok_or_else(|| anyhow!("missing element type for array"))?;
@@ -178,12 +178,21 @@ fn column(col: &ir::Column<'_>) -> anyhow::Result<String> {
 
             format!("[]{}", data_type)
         }
-        (Some(default), "integer")
-            if is_serial_expression(&col.table_name, &col.column_name, default) =>
-        {
-            "serial".to_owned()
-        }
-        (_, data_type) => data_type.to_owned(),
+        "character" => match col.character_maximum_length {
+            Some(max) => format!("char({})", max),
+            None => "char".to_string(),
+        },
+        "character varying" => match col.character_maximum_length {
+            Some(max) => format!("varchar({})", max),
+            None => "varchar".to_string(),
+        },
+        "integer" => match col.column_default.as_ref() {
+            Some(default) if is_serial_expression(&col.table_name, &col.column_name, default) => {
+                "serial".to_owned()
+            }
+            _ => "integer".to_owned(),
+        },
+        data_type => data_type.to_owned(),
     };
 
     write!(&mut res, " {}", data_type)?;
