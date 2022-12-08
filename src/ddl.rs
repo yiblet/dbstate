@@ -1,6 +1,6 @@
 use std::{collections::btree_set, fmt::Write};
 
-use crate::ir;
+use crate::{ir, schema};
 
 pub fn table(table: &ir::Table<'_>) -> anyhow::Result<String> {
     if table.table.table_type != Some("BASE TABLE".to_string()) {
@@ -99,13 +99,44 @@ fn table_constraint(item: &ir::TableConstraint<'_>) -> anyhow::Result<Option<Str
             let res = format!("UNIQUE ({})", cols);
             Ok(Some(res))
         }
+        "FOREIGN KEY" => {
+            let reference_table: &schema::Table = item.tables.get(0).ok_or_else(|| {
+                anyhow!(
+                    "missing foreign key reference table for constraint {}",
+                    item.constraint_name
+                )
+            })?;
+
+            let mut key_cols = (*item.key_columns).clone();
+            key_cols.sort_by_key(|c| c.usage.ordinal_position);
+
+            let key_cols_string = join(key_cols.iter().map(|c| identifier(&c.column_name)), ", ");
+            let mut reference_cols = (*item.columns).clone();
+            reference_cols.sort_by_key(|c| {
+                key_cols
+                    .iter()
+                    .enumerate()
+                    .find(|k| k.1.usage.position_in_unique_constraint == Some(c.ordinal_position))
+                    .map(|r| r.0)
+            });
+
+            let reference_cols_string = join(
+                reference_cols.iter().map(|c| identifier(&c.column_name)),
+                ", ",
+            );
+
+            let res = format!(
+                "FOREIGN KEY ({}) REFERENCES {} ({})",
+                key_cols_string, reference_table.table_name, reference_cols_string
+            );
+            Ok(Some(res))
+        }
         _ => {
             log::warn!(
                 "unexepected constraint type {} {:?}",
                 item.constraint_type.as_str(),
                 item
             );
-
             Ok(None)
         }
     }

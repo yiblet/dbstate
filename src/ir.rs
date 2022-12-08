@@ -36,6 +36,20 @@ impl<'a> std::ops::Deref for CheckConstraint<'a> {
 }
 
 #[derive(Debug, Clone)]
+pub struct KeyColumn<'a> {
+    pub column: Column<'a>,
+    pub usage: &'a schema::KeyColumnUsage,
+}
+
+impl<'a> std::ops::Deref for KeyColumn<'a> {
+    type Target = Column<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.column
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Column<'a> {
     pub column: &'a schema::Column,
     pub element_type: Option<&'a schema::ElementType>,
@@ -54,6 +68,7 @@ pub struct TableConstraint<'a> {
     pub table_constraint: &'a schema::TableConstraint,
     pub check_constraints: Rc<Vec<CheckConstraint<'a>>>,
     pub columns: Rc<Vec<Column<'a>>>,
+    pub key_columns: Rc<Vec<KeyColumn<'a>>>,
     // should always be just one table
     pub tables: Rc<Vec<&'a schema::Table>>, //referencing the schema (not the ir::Table) since using the ir table would cause a circular reference.
 }
@@ -165,6 +180,11 @@ fn get_all_table_constraints<'a>(
         collect_by_key(all.constraint_column_usage.iter(), |c| {
             (c.constraint_schema.as_ref(), &c.constraint_name)
         });
+
+    let schema_key_column_usage_by_table_keys = collect_by_key(all.key_column_usage.iter(), |c| {
+        (c.constraint_schema.as_ref(), &c.constraint_name)
+    });
+
     let schema_constraint_table_usage_by_table_constraints =
         collect_by_key(all.constraint_table_usage.iter(), |c| {
             (c.constraint_schema.as_ref(), &c.constraint_name)
@@ -180,6 +200,12 @@ fn get_all_table_constraints<'a>(
         .map(|table_constraint| -> TableConstraint<'_> {
             let column_usage: Option<&Vec<_>> = schema_constraint_column_usage_by_table_constraints
                 .get_vec(&(
+                    table_constraint.constraint_schema.as_ref(),
+                    &table_constraint.constraint_name,
+                ));
+
+            let key_column_usage: Option<&Vec<_>> =
+                schema_key_column_usage_by_table_keys.get_vec(&(
                     table_constraint.constraint_schema.as_ref(),
                     &table_constraint.constraint_name,
                 ));
@@ -203,6 +229,28 @@ fn get_all_table_constraints<'a>(
                         )
                     }
                     column.cloned()
+                })
+                .collect();
+
+            let mut key_columns: Vec<_> = key_column_usage
+                .iter()
+                .flat_map(|v| v.iter())
+                .filter_map(|usage| {
+                    let column = column_by_table_column
+                        .get(&(
+                            usage.table_schema.as_ref(),
+                            &usage.table_name,
+                            &usage.column_name,
+                        ))
+                        .cloned();
+                    if column.is_none() {
+                        log::warn!(
+                            "cannot find column {} in table {}",
+                            usage.column_name,
+                            usage.table_name
+                        )
+                    }
+                    column.cloned().map(|c| KeyColumn { column: c, usage })
                 })
                 .collect();
 
@@ -238,12 +286,14 @@ fn get_all_table_constraints<'a>(
                     .collect();
 
             columns.sort_by_key(|c| (&c.table_schema, &c.table_name, c.ordinal_position));
+            key_columns.sort_by_key(|c| (&c.table_schema, &c.table_name, c.ordinal_position));
             tables.sort_by_key(|t| (&t.table_schema, &t.table_name));
             check_constraints.sort_by_key(|t| (&t.constraint_name));
 
             TableConstraint {
                 table_constraint,
                 columns: Rc::new(columns),
+                key_columns: Rc::new(key_columns),
                 tables: Rc::new(tables),
                 check_constraints: Rc::new(check_constraints),
             }

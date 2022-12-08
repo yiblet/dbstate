@@ -9,6 +9,7 @@ pub struct All {
     pub views: Vec<View>,
     pub table_constraints: Vec<TableConstraint>,
     pub constraint_column_usage: Vec<ConstraintColumnUsage>,
+    pub key_column_usage: Vec<KeyColumnUsage>,
     pub constraint_table_usage: Vec<ConstraintTableUsage>,
     pub element_types: Vec<ElementType>,
     pub check_constraints: Vec<CheckConstraint>,
@@ -343,6 +344,37 @@ pub struct ConstraintColumnUsage {
 
     /// Name of the constraint
     pub constraint_name: String,
+}
+
+/// The view key_column_usage identifies all columns in the current database that are restricted by some unique, primary key, or foreign key constraint. Check constraints are not included in this view. Only those columns are shown that the current user has access to, by way of being the owner or having some privilege.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct KeyColumnUsage {
+    /// Name of the database that contains the constraint (always the current database)
+    pub constraint_catalog: Option<String>,
+
+    /// Name of the schema that contains the constraint
+    pub constraint_schema: Option<String>,
+
+    /// Name of the constraint
+    pub constraint_name: String,
+
+    /// Name of the database that contains the table that contains the column that is restricted by this constraint (always the current database)
+    pub table_catalog: Option<String>,
+
+    /// Name of the schema that contains the table that contains the column that is restricted by this constraint
+    pub table_schema: Option<String>,
+
+    /// Name of the table that contains the column that is restricted by this constraint
+    pub table_name: String,
+
+    /// Name of the column that is restricted by this constraint
+    pub column_name: String,
+
+    /// Ordinal position of the column within the constraint key (count starts at 1)
+    pub ordinal_position: i32,
+
+    /// For a foreign-key constraint, ordinal position of the referenced column within its unique constraint (count starts at 1); otherwise null
+    pub position_in_unique_constraint: Option<i32>,
 }
 
 /// The view constraint_table_usage identifies all tables in the current database that are used by some constraint and are owned by a currently enabled role. (This is different from the view table_constraints, which identifies all table constraints along with the table they are defined on.) For a foreign key constraint, this view identifies the table that the foreign key references. For a unique or primary key constraint, this view simply identifies the table the constraint belongs to. Check constraints and not-null constraints are not included in this view.

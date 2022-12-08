@@ -1,61 +1,71 @@
 use crate::schema;
 
 pub async fn get_all_tables(pool: &sqlx::postgres::PgPool) -> anyhow::Result<Vec<schema::Table>> {
-    let tables: Vec<schema::Table> = sqlx::query_as(r#"select * from information_schema.tables"#)
+    let rows: Vec<schema::Table> = sqlx::query_as(r#"select * from information_schema.tables"#)
         .fetch_all(pool)
         .await?;
 
-    Ok(tables)
+    Ok(rows)
 }
 
 pub async fn get_all_views(pool: &sqlx::postgres::PgPool) -> anyhow::Result<Vec<schema::View>> {
-    let views: Vec<schema::View> = sqlx::query_as(r#"select * from information_schema.views"#)
+    let rows: Vec<schema::View> = sqlx::query_as(r#"select * from information_schema.views"#)
         .fetch_all(pool)
         .await?;
 
-    Ok(views)
+    Ok(rows)
 }
 
 pub async fn get_all_columns(pool: &sqlx::postgres::PgPool) -> anyhow::Result<Vec<schema::Column>> {
-    let columns: Vec<schema::Column> =
-        sqlx::query_as(r#"select * from information_schema.columns"#)
-            .fetch_all(pool)
-            .await?;
+    let rows: Vec<schema::Column> = sqlx::query_as(r#"select * from information_schema.columns"#)
+        .fetch_all(pool)
+        .await?;
 
-    Ok(columns)
+    Ok(rows)
 }
 
 pub async fn get_all_table_constraints(
     pool: &sqlx::postgres::PgPool,
 ) -> anyhow::Result<Vec<schema::TableConstraint>> {
-    let table_constraints: Vec<schema::TableConstraint> =
+    let rows: Vec<schema::TableConstraint> =
         sqlx::query_as(r#"select * from information_schema.table_constraints"#)
             .fetch_all(pool)
             .await?;
 
-    Ok(table_constraints)
+    Ok(rows)
 }
 
 pub async fn get_all_constraint_column_usage(
     pool: &sqlx::postgres::PgPool,
 ) -> anyhow::Result<Vec<schema::ConstraintColumnUsage>> {
-    let table_constraints: Vec<schema::ConstraintColumnUsage> =
+    let rows: Vec<schema::ConstraintColumnUsage> =
         sqlx::query_as(r#"select * from information_schema.constraint_column_usage"#)
             .fetch_all(pool)
             .await?;
 
-    Ok(table_constraints)
+    Ok(rows)
+}
+
+pub async fn get_all_key_column_usage(
+    pool: &sqlx::postgres::PgPool,
+) -> anyhow::Result<Vec<schema::KeyColumnUsage>> {
+    let rows: Vec<schema::KeyColumnUsage> =
+        sqlx::query_as(r#"select * from information_schema.key_column_usage"#)
+            .fetch_all(pool)
+            .await?;
+
+    Ok(rows)
 }
 
 pub async fn get_all_constraint_table_usage(
     pool: &sqlx::postgres::PgPool,
 ) -> anyhow::Result<Vec<schema::ConstraintTableUsage>> {
-    let table_constraints: Vec<schema::ConstraintTableUsage> =
+    let rows: Vec<schema::ConstraintTableUsage> =
         sqlx::query_as(r#"select * from information_schema.constraint_table_usage"#)
             .fetch_all(pool)
             .await?;
 
-    Ok(table_constraints)
+    Ok(rows)
 }
 
 pub async fn get_all_element_types(
@@ -91,6 +101,7 @@ pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::Al
         views_res,
         table_constraints_res,
         constraint_column_usage_res,
+        key_column_usage_res,
         constraint_table_usage_res,
         element_types_res,
         check_constraints_res,
@@ -100,6 +111,7 @@ pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::Al
         get_all_views(&pool),
         get_all_table_constraints(&pool),
         get_all_constraint_column_usage(&pool),
+        get_all_key_column_usage(&pool),
         get_all_constraint_table_usage(&pool),
         get_all_element_types(&pool),
         get_all_check_constraints(&pool),
@@ -117,6 +129,7 @@ pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::Al
         views,
         table_constraints,
         constraint_column_usage,
+        key_column_usage,
         constraint_table_usage,
         element_types,
         check_constraints,
@@ -126,6 +139,7 @@ pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::Al
         views_res?,
         table_constraints_res?,
         constraint_column_usage_res?,
+        key_column_usage_res?,
         constraint_table_usage_res?,
         element_types_res?,
         check_constraints_res?,
@@ -138,6 +152,7 @@ pub async fn get_all(pool: &sqlx::postgres::PgPool) -> anyhow::Result<schema::Al
         table_constraints,
         constraint_column_usage,
         constraint_table_usage,
+        key_column_usage,
         element_types,
         check_constraints,
     };
