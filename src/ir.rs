@@ -84,7 +84,7 @@ fn get_all_tables<'a>(
     all.tables
         .iter()
         .map(|table| {
-            let columns: Vec<_> = columns_by_table
+            let mut columns: Vec<_> = columns_by_table
                 .get_vec(&(table.table_schema.as_ref(), &table.table_name))
                 .iter()
                 .flat_map(|v| v.iter())
@@ -92,13 +92,16 @@ fn get_all_tables<'a>(
                 .cloned()
                 .collect();
 
-            let table_constraints: Vec<_> = table_constraints_by_table
+            let mut table_constraints: Vec<_> = table_constraints_by_table
                 .get_vec(&(table.table_schema.as_ref(), &table.table_name))
                 .iter()
                 .flat_map(|v| v.iter())
                 .cloned()
                 .cloned()
                 .collect();
+
+            columns.sort_by_key(|c| c.ordinal_position);
+            table_constraints.sort_by_key(|t| &t.constraint_name);
 
             Table {
                 table,
@@ -119,7 +122,8 @@ fn get_all_columns<'a>(all: &'a schema::All) -> Vec<Column<'a>> {
         )
     });
 
-    all.columns
+    let mut columns: Vec<_> = all
+        .columns
         .iter()
         .map(|column| {
             let element_type = element_types_by_column
@@ -135,7 +139,11 @@ fn get_all_columns<'a>(all: &'a schema::All) -> Vec<Column<'a>> {
                 element_type,
             }
         })
-        .collect()
+        .collect();
+
+    columns.sort_by_key(|c| (&c.table_schema, &c.table_name, c.ordinal_position));
+
+    columns
 }
 
 fn get_all_table_constraints<'a>(
@@ -176,7 +184,7 @@ fn get_all_table_constraints<'a>(
                     &table_constraint.constraint_name,
                 ));
 
-            let columns = column_usage
+            let mut columns: Vec<_> = column_usage
                 .iter()
                 .flat_map(|v| v.iter())
                 .filter_map(|usage| {
@@ -198,7 +206,7 @@ fn get_all_table_constraints<'a>(
                 })
                 .collect();
 
-            let tables: Vec<_> = schema_constraint_table_usage_by_table_constraints
+            let mut tables: Vec<_> = schema_constraint_table_usage_by_table_constraints
                 .get_vec(&(
                     table_constraint.constraint_schema.as_ref(),
                     &table_constraint.constraint_name,
@@ -216,17 +224,22 @@ fn get_all_table_constraints<'a>(
                 })
                 .collect();
 
-            let check_constraints: Vec<_> = constraint_schema_constraint_name_by_check_constraints
-                .get_vec(&(
-                    table_constraint.constraint_schema.as_ref(),
-                    &table_constraint.constraint_name,
-                ))
-                .iter()
-                .flat_map(|v| v.iter())
-                .map(|check| CheckConstraint {
-                    check_constraint: check,
-                })
-                .collect();
+            let mut check_constraints: Vec<_> =
+                constraint_schema_constraint_name_by_check_constraints
+                    .get_vec(&(
+                        table_constraint.constraint_schema.as_ref(),
+                        &table_constraint.constraint_name,
+                    ))
+                    .iter()
+                    .flat_map(|v| v.iter())
+                    .map(|check| CheckConstraint {
+                        check_constraint: check,
+                    })
+                    .collect();
+
+            columns.sort_by_key(|c| (&c.table_schema, &c.table_name, c.ordinal_position));
+            tables.sort_by_key(|t| (&t.table_schema, &t.table_name));
+            check_constraints.sort_by_key(|t| (&t.constraint_name));
 
             TableConstraint {
                 table_constraint,
@@ -245,11 +258,14 @@ pub fn get_all<'a>(all: &'a schema::All) -> All<'a> {
     }
     let columns = get_all_columns(all);
     let table_constraints = get_all_table_constraints(all, &columns);
-    let tables = get_all_tables(all, &columns, &table_constraints);
+    let mut tables = get_all_tables(all, &columns, &table_constraints);
+
+    tables.sort_by_key(|t| (&t.table_schema, &t.table_name));
 
     let res = All {
         tables: Rc::new(tables),
     };
+
     if let Some(dur) = ir_start_time.and_then(|s| s.elapsed().ok()) {
         log::info!(
             "ir get all completed: elapsed: {}ms",
